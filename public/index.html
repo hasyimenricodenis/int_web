@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Reference Number Tracker</title>
+    <style>
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        th, td {
+            border: 1px solid black;
+            padding: 8px;
+            text-align: left;
+        }
+        th {
+            background-color: #f2f2f2;
+        }
+        .loader {
+            display: none; /* Hidden by default */
+            border: 16px solid #f3f3f3;
+            border-radius: 50%;
+            border-top: 16px solid #3498db;
+            width: 120px;
+            height: 120px;
+            animation: spin 2s linear infinite;
+            margin: 20px auto;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body>
+    <h1>Track Reference Numbers</h1>
+    <form id="refForm">
+        <textarea id="refNumbers" rows="10" cols="50" placeholder="Enter reference numbers, one per line"></textarea><br>
+        <button type="submit">Submit</button>
+    </form>
+
+    <!-- Loader -->
+    <div id="loader" class="loader"></div>
+
+    <h2>Results</h2>
+    <table id="resultsTable">
+        <thead>
+            <tr>
+                <th>Reference Number</th>
+                <th>Status</th>
+                <th>Mapping</th>
+            </tr>
+        </thead>
+        <tbody>
+            <!-- Results will be injected here -->
+        </tbody>
+    </table>
+    <button id="copyButton" class="btn btn-secondary">Copy Results</button>
+
+    <script>
+        document.getElementById('refForm').addEventListener('submit', async (event) => {
+            event.preventDefault(); // Prevent the default form submission
+
+            // Show loader
+            document.getElementById('loader').style.display = 'block';
+
+            const refNumbers = document.getElementById('refNumbers').value.split('\n').map(num => num.trim()).filter(Boolean);
+            const resultsTableBody = document.getElementById('resultsTable').querySelector('tbody');
+            resultsTableBody.innerHTML = ''; // Clear previous results
+
+            for (const refNumber of refNumbers) {
+                const response = await fetch('/submit', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ refNumber })
+                });
+                const result = await response.json();
+                const row = `<tr>
+                                <td>${result.refNumber}</td>
+                                <td>${result.status}</td>
+                                <td>${result.mapping}</td>
+                             </tr>`;
+                resultsTableBody.innerHTML += row; // Append new row
+            }
+
+            // Hide loader
+            document.getElementById('loader').style.display = 'none';
+
+            // Show alert after completion
+            alert('Submission complete!');
+        });
+
+        document.getElementById('copyButton').addEventListener('click', () => {
+            const resultsTableBody = document.getElementById('resultsTable').querySelector('tbody');
+            
+            // Create a temporary div to hold the HTML
+            const tempDiv = document.createElement('div');
+            tempDiv.innerHTML = `<table style="border-collapse: collapse; width: 100%;">
+                                    <tbody>${resultsTableBody.innerHTML}</tbody>
+                                 </table>`;
+            
+            // Append it to the body (not visible)
+            document.body.appendChild(tempDiv);
+            
+            // Select the content of the temporary div
+            const range = document.createRange();
+            range.selectNode(tempDiv);
+            const selection = window.getSelection();
+            selection.removeAllRanges();
+            selection.addRange(range);
+
+            // Copy the selected content to the clipboard
+            document.execCommand('copy');
+            
+            // Remove the temporary div
+            document.body.removeChild(tempDiv);
+            
+            alert('Results copied to clipboard!');
+        });
+    </script>
+</body>
+</html>
